@@ -1,0 +1,6 @@
+/cache
+/uv.lock
+__pycache__
+/hikingplots.egg-info
+/dist
+/build
