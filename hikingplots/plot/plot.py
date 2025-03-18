@@ -78,11 +78,25 @@ def plot_track_duotone(
     topo_land_path: pathlib.Path | str,
     topo_water_path: pathlib.Path | str,
     draw_partial_track: float = 1.0,
+    track_halign: str="center",
     draw_topo: bool = True,
     draw_major_level_labels: bool = True,
-    show_steps: bool = True,
     add_scale: bool = False,
+    show_steps: bool = True,
 ):
+    """Plot a track in duotone style.
+
+    Args:
+        track_path: Path to the track folder.
+        topo_land_path: Path to the land topography data (see `topo-land` in README.md).
+        topo_water_path: Path to the water topography data (see `topo-water` in README.md).
+        draw_partial_track: Fraction of the track to draw (if 0 <= `draw_partial_track` < 1). Draw full track if `draw_partial_track` >= 1.
+        track_halign: Horizontal alignment of the track. One of "left", "center", "right".
+        draw_topo: Whether to draw the topography.
+        draw_major_level_labels: Whether to draw the major level labels.
+        show_steps: Whether to log the steps on the console.
+        add_scale: Whether to add a scale to the plot.
+    """
     target_height = 480
     target_width = 800
 
@@ -123,10 +137,17 @@ def plot_track_duotone(
             )
         else:
             # too high -> make wider
-            area_of_interest.east_longitude = (
-                area_of_interest.west_longitude
-                + area_of_interest.height / longitude_scale * target_aspect
-            )
+            target_width_longitude = area_of_interest.height / longitude_scale * target_aspect
+            if track_halign == "center":
+                current_center = area_of_interest.center_longitude
+                area_of_interest.east_longitude = current_center + 0.5 * target_width_longitude
+                area_of_interest.west_longitude = current_center - 0.5 * target_width_longitude
+            elif track_halign == "left":
+                area_of_interest.east_longitude = area_of_interest.west_longitude + target_width_longitude
+            elif track_halign == "right":
+                area_of_interest.west_longitude = area_of_interest.east_longitude - target_width_longitude
+            else:
+                raise ValueError(f"Invalid track_halign: {track_halign}")
 
     if draw_topo:
         with step_indicator_cls("Loading land topography"):

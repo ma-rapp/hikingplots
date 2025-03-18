@@ -16,6 +16,12 @@ def cli():
     type=click.Path(exists=True),
 )
 @click.option(
+    "--output-path",
+    help="Path to the output file",
+    type=click.Path(dir_okay=False),
+    required=True,
+)
+@click.option(
     "--topo-land-path",
     default="topo-land",
     help="Path to the folder containing the land topology data",
@@ -28,12 +34,6 @@ def cli():
     type=click.Path(exists=True),
 )
 @click.option("--tag", help="Limit the plot to a specific tag", type=str)
-@click.option(
-    "--output-path",
-    help="Path to the output file",
-    type=click.Path(dir_okay=False),
-    required=True,
-)
 @click.option("--no-terrain", is_flag=True)
 @click.option("--no-water", is_flag=True)
 @click.option("--no-tracks", is_flag=True)
@@ -50,6 +50,12 @@ def plot_area(*args, output_path, **kwargs):
     type=click.Path(exists=True),
 )
 @click.option(
+    "--output-path",
+    help="Path to the output file",
+    type=click.Path(dir_okay=False),
+    required=True,
+)
+@click.option(
     "--topo-land-path",
     default="topo-land",
     help="Path to the folder containing the land topology data",
@@ -61,12 +67,8 @@ def plot_area(*args, output_path, **kwargs):
     help="Path to the folder containing the water topology data",
     type=click.Path(exists=True),
 )
-@click.option(
-    "--output-path",
-    help="Path to the output file",
-    type=click.Path(dir_okay=False),
-    required=True,
-)
+@click.option("--draw-partial-track", type=float, default=1.0)
+@click.option("--track-halign", type=str, default="center")
 @click.option("--draw-topo/--no-draw-topo", is_flag=True, default=True)
 @click.option(
     "--draw-major-level-labels/--no-draw-major-level-labels", is_flag=True, default=True
