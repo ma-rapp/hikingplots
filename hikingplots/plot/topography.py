@@ -192,6 +192,7 @@ class ContourLandTopography(LandTopography):
         self,
         major_level_step_size: int = 100,
         minor_level_step_size: int = 20,
+        draw_zero_level: bool = False,
         draw_major_level_labels: bool = True,
         draw_hillshade: bool = True,
         **kwargs,
@@ -199,6 +200,7 @@ class ContourLandTopography(LandTopography):
         super().__init__(**kwargs)
         self._major_level_step_size = major_level_step_size
         self._minor_level_step_size = minor_level_step_size
+        self._draw_zero_level = draw_zero_level
         self._draw_major_level_labels = draw_major_level_labels
         self._draw_hillshade = draw_hillshade
 
@@ -243,6 +245,10 @@ class ContourLandTopography(LandTopography):
             ]
         else:
             minor_levels = []
+
+        if not self._draw_zero_level:
+            major_levels = [level for level in major_levels if level != 0]
+            minor_levels = [level for level in minor_levels if level != 0]
 
         ax.contour(
             height_map[::-1],
