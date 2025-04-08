@@ -1,5 +1,5 @@
-from collections import defaultdict
 import pathlib
+from collections import defaultdict
 
 from .activity_plot import ActivityPlot
 from .console import NoStepIndicator, StepIndicator
@@ -19,7 +19,7 @@ def plot_area(
     no_tracks: bool,
     track_plot_width_scale: int,
     track_plot_solid: bool,
-    show_steps:bool =True,
+    show_steps: bool = True,
 ):
     step_indicator_cls = StepIndicator if show_steps else NoStepIndicator
 
@@ -48,7 +48,9 @@ def plot_area(
         land = LandTopography.load_area(pathlib.Path(topo_land_path), area_of_interest)
 
     with step_indicator_cls("Loading water topography"):
-        water = WaterTopography.load_area(pathlib.Path(topo_water_path), area_of_interest, land, color="royalblue")
+        water = WaterTopography.load_area(
+            pathlib.Path(topo_water_path), area_of_interest, land, color="royalblue"
+        )
 
     with step_indicator_cls("Setting up plot") as ind:
         plot = ActivityPlot(
@@ -78,7 +80,7 @@ def plot_track_duotone(
     topo_land_path: pathlib.Path | str,
     topo_water_path: pathlib.Path | str,
     draw_partial_track: float = 1.0,
-    track_halign: str="center",
+    track_halign: str = "center",
     draw_topo: bool = True,
     draw_major_level_labels: bool = True,
     add_scale: bool = False,
@@ -117,17 +119,18 @@ def plot_track_duotone(
         area_of_interest = track.bounding_box
         area_of_interest = area_of_interest.enlarge(0.1)
 
-        longitude_scale = ActivityPlot.get_longitude_scale(area_of_interest)
         target_aspect = target_width / target_height
-        actual_aspect = (
-            longitude_scale * area_of_interest.width
-        ) / area_of_interest.height
 
         while (
             area_of_interest.width_meters < 1_800
             and area_of_interest.height_meters < 1_800 / target_aspect
         ):
             area_of_interest = area_of_interest.enlarge(0.1)
+
+        longitude_scale = ActivityPlot.get_longitude_scale(area_of_interest)
+        actual_aspect = (
+            longitude_scale * area_of_interest.width
+        ) / area_of_interest.height
 
         if actual_aspect > target_aspect:
             # too wide -> make higher
@@ -137,17 +140,28 @@ def plot_track_duotone(
             )
         else:
             # too high -> make wider
-            target_width_longitude = area_of_interest.height / longitude_scale * target_aspect
+            target_width_longitude = (
+                area_of_interest.height / longitude_scale * target_aspect
+            )
             if track_halign == "center":
                 current_center = area_of_interest.center_longitude
-                area_of_interest.east_longitude = current_center + 0.5 * target_width_longitude
-                area_of_interest.west_longitude = current_center - 0.5 * target_width_longitude
+                area_of_interest.east_longitude = (
+                    current_center + 0.5 * target_width_longitude
+                )
+                area_of_interest.west_longitude = (
+                    current_center - 0.5 * target_width_longitude
+                )
             elif track_halign == "left":
-                area_of_interest.east_longitude = area_of_interest.west_longitude + target_width_longitude
+                area_of_interest.east_longitude = (
+                    area_of_interest.west_longitude + target_width_longitude
+                )
             elif track_halign == "right":
-                area_of_interest.west_longitude = area_of_interest.east_longitude - target_width_longitude
+                area_of_interest.west_longitude = (
+                    area_of_interest.east_longitude - target_width_longitude
+                )
             else:
                 raise ValueError(f"Invalid track_halign: {track_halign}")
+        assert area_of_interest.contains(track.bounding_box)
 
     if draw_topo:
         with step_indicator_cls("Loading land topography"):

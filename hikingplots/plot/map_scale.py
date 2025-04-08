@@ -26,7 +26,7 @@ class MapScale(MapPlottable):
         if distance_m < 1000:
             return f"{distance_m} m"
         else:
-            return f"{distance_m//1000} km"
+            return f"{distance_m // 1000} km"
 
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition

@@ -143,7 +143,9 @@ class LandTopography(MapPlottable):
         return height_map
 
     @classmethod
-    def load_area(cls, topo_land_path: pathlib.Path, area: MapSection, **kwargs) -> "LandTopography":
+    def load_area(
+        cls, topo_land_path: pathlib.Path, area: MapSection, **kwargs
+    ) -> "LandTopography":
         topography = rasterio.open(topo_land_path / "merged.tif")
 
         fully_contained = (
@@ -395,8 +397,14 @@ class WaterTopography(MapPlottable):
 
         water_bodies = []
         for river in river_names:
-            filename = topo_water_path / f"EU_hydro_gpkg_eu/euhydro_{river}_v013_GPKG/euhydro_{river}_v013.gpkg"
-            metadata_filename = topo_water_path / f"EU_hydro_gpkg_eu/euhydro_{river}_v013_GPKG/Metadata/{river}_metadata.xml"
+            filename = (
+                topo_water_path
+                / f"EU_hydro_gpkg_eu/euhydro_{river}_v013_GPKG/euhydro_{river}_v013.gpkg"
+            )
+            metadata_filename = (
+                topo_water_path
+                / f"EU_hydro_gpkg_eu/euhydro_{river}_v013_GPKG/Metadata/{river}_metadata.xml"
+            )
             water_bodies.extend(
                 WaterTopography._load_water_bodies_from_file(
                     filename, metadata_filename, area, strahler_limit
