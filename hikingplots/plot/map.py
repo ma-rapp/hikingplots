@@ -22,6 +22,14 @@ class MapSection:
             west_longitude=self.west_longitude - smaller_size * factor,
         )
 
+    def enlarge_absolute(self, latitude: float, longitude: float) -> "MapSection":
+        return MapSection(
+            north_latitude=self.north_latitude + latitude,
+            south_latitude=self.south_latitude - latitude,
+            east_longitude=self.east_longitude + longitude,
+            west_longitude=self.west_longitude - longitude,
+        )
+
     def round_to(self, resolution: float) -> "MapSection":
         # round towards outside
         return MapSection(
@@ -74,6 +82,14 @@ class MapSection:
             and self.south_latitude <= other.south_latitude
             and self.east_longitude >= other.east_longitude
             and self.west_longitude <= other.west_longitude
+        )
+
+    def contains_point(self, latitude: float, longitude: float) -> bool:
+        return (
+            self.north_latitude >= latitude
+            and self.south_latitude <= latitude
+            and self.east_longitude >= longitude
+            and self.west_longitude <= longitude
         )
 
     @staticmethod

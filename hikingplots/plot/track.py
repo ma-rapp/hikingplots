@@ -40,17 +40,14 @@ class Track(MapPlottable):
     @property
     def waypoints(self) -> pd.DataFrame:
         if self._waypoints is None:
-            rows = []
-            for track in self._gpx.tracks:
-                for segment in track.segments:
-                    for point in segment.points:
-                        rows.append(
-                            [
-                                point.time,
-                                point.latitude,
-                                point.longitude,
-                            ]
-                        )
+            rows = [
+                (
+                    point.time,
+                    point.latitude,
+                    point.longitude,
+                )
+                for point in self._gpx.walk(only_points=True)
+            ]
             columns = ["time", "latitude", "longitude"]
             self._waypoints = pd.DataFrame(rows, columns=columns)
         return self._waypoints

@@ -1,6 +1,10 @@
+import re
+
 import diskcache
 import overpy
 from geopy.geocoders import Nominatim
+
+from hikingplots.plot.map import MapSection
 
 
 class GeoLocator(object):
@@ -38,17 +42,21 @@ class GeoLocator(object):
         alpine_restaurants = [
             r
             for r in restaurants
-            if "hütte" in r["name"].lower()
-            or "alpe" in r["name"].lower()
-            or "rifugio" in r["name"].lower()
-            or "alm" in r["name"].lower()
+            if re.search(
+                r"(hütte)|(alpe)|(rifugio)|(alm([^a-z]|$))",
+                r["tags"].get("name", ""),
+                re.IGNORECASE,
+            )
         ]
         return alpine_huts + alpine_restaurants
 
     @staticmethod
     def get_named_water_bodies(map_section):
-        return (
+        water_bodies = (
             GeoLocator.get_named_elements(
+                map_section, type_="relation", attribute="type=waterway"
+            )
+            + GeoLocator.get_named_elements(
                 map_section, type_="relation", attribute="natural=water"
             )
             + GeoLocator.get_named_elements(
@@ -58,6 +66,17 @@ class GeoLocator(object):
                 map_section, type_="node", attribute="natural=cape"
             )
         )
+        return [
+            water_body
+            for water_body in water_bodies
+            if "zoo" not in water_body["tags"]
+            and water_body["tags"].get("amenity") != "kneipp_water_cure"
+            and water_body["tags"].get("location") != "underground"
+            and water_body["tags"].get("man_made") != "pipeline"
+            and water_body["tags"].get("substance") != "sewer"
+            and water_body["tags"].get("tunnel") != "culvert"
+            and water_body["tags"].get("water") != "wastewater"
+        ]
 
     @staticmethod
     def get_named_cave_entrances(map_section):
@@ -69,9 +88,10 @@ class GeoLocator(object):
 
     @staticmethod
     @_cache.memoize()
-    def get_named_elements(map_section, type_, attribute):
-        extended_map_section = map_section.enlarge(
-            0.1
+    def get_named_elements(map_section: MapSection, type_, attribute):
+        extended_map_section = map_section.enlarge_absolute(
+            latitude=0.001,  # around 100 meters
+            longitude=0.001,  # around 100 meters at the equator
         )  # to capture points on the boundary
         query = f"""\
 [out:json][timeout:25][maxsize:100000000];
@@ -82,19 +102,20 @@ out;
 """
         api = overpy.Overpass()
         result = api.query(query)
-        nodes = []
+        elements = []
         for node in result.nodes:
             if "name" in node.tags:
-                nodes.append(
+                elements.append(
                     {
                         "name": node.tags["name"],
                         "nodes": [{"latitude": node.lat, "longitude": node.lon}],
+                        "tags": node.tags,
                     }
                 )
         nodes_by_id = {node.id: node for node in result.nodes}
         for way in result.ways:
             if "name" in way.tags:
-                nodes.append(
+                elements.append(
                     {
                         "name": way.tags["name"],
                         "nodes": [
@@ -103,12 +124,16 @@ out;
                                 "longitude": nodes_by_id[node.id].lon,
                             }
                             for node in way.nodes
+                            if extended_map_section.contains_point(
+                                nodes_by_id[node.id].lat, nodes_by_id[node.id].lon
+                            )
                         ],
+                        "tags": way.tags,
                     }
                 )
         for relation in result.relations:
             if "name" in relation.tags:
-                nodes.append(
+                elements.append(
                     {
                         "name": relation.tags["name"],
                         "nodes": [
@@ -118,7 +143,11 @@ out;
                             }
                             for member in relation.members
                             for node in member._result.nodes
+                            if extended_map_section.contains_point(
+                                nodes_by_id[node.id].lat, nodes_by_id[node.id].lon
+                            )
                         ],
+                        "tags": relation.tags,
                     }
                 )
-        return nodes
+        return elements
