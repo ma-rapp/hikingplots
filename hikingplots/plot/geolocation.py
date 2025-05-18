@@ -35,6 +35,8 @@ class GeoLocator(object):
     def get_alpine_huts(map_section):
         alpine_huts = GeoLocator.get_named_elements(
             map_section, type_="way", attribute="tourism=alpine_hut"
+        ) + GeoLocator.get_named_elements(
+            map_section, type_="node", attribute="tourism=alpine_hut"
         )
         restaurants = GeoLocator.get_named_elements(
             map_section, type_="way", attribute="amenity=restaurant"
