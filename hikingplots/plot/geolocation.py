@@ -73,11 +73,13 @@ class GeoLocator(object):
             for water_body in water_bodies
             if "zoo" not in water_body["tags"]
             and water_body["tags"].get("amenity") != "kneipp_water_cure"
+            and water_body["tags"].get("construction:waterway") != "weir"
             and water_body["tags"].get("location") != "underground"
             and water_body["tags"].get("man_made") != "pipeline"
             and water_body["tags"].get("substance") != "sewer"
             and water_body["tags"].get("tunnel") != "culvert"
             and water_body["tags"].get("water") != "wastewater"
+            and water_body["tags"].get("waterway") != "weir"
         ]
 
     @staticmethod
