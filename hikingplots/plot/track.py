@@ -117,6 +117,7 @@ class Track(MapPlottable):
         seen_names = set()
         close_landmarks = []
         for landmark in landmarks:
+            first_waypoint_index = None
             for node in landmark["nodes"]:
                 waypoints = self.waypoints.copy()
                 waypoints["rel_latitude"] = waypoints["latitude"] - float(
@@ -131,16 +132,20 @@ class Track(MapPlottable):
                     waypoints["rel_longitude"] < min_distance
                 )
                 if close.any():
-                    if landmark["name"] not in seen_names:
+                    if first_waypoint_index is None:
                         first_waypoint_index = waypoints.index[close].min()
-                        close_landmarks.append(
-                            {
-                                "name": landmark["name"],
-                                "first_waypoint_index": first_waypoint_index,
-                            }
+                    else:
+                        first_waypoint_index = min(
+                            first_waypoint_index, waypoints.index[close].min()
                         )
-                        seen_names.add(landmark["name"])
-                    break
+            if first_waypoint_index is not None and landmark["name"] not in seen_names:
+                close_landmarks.append(
+                    {
+                        "name": landmark["name"],
+                        "first_waypoint_index": first_waypoint_index,
+                    }
+                )
+                seen_names.add(landmark["name"])
         close_landmarks.sort(key=lambda landmark: landmark["first_waypoint_index"])
         return [landmark["name"] for landmark in close_landmarks]
 
