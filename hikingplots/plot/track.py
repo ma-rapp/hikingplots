@@ -31,7 +31,7 @@ class Track(MapPlottable):
         self._plot_start = plot_start
         self._plot_end = plot_end
         self._draw_partial_track = draw_partial_track
-        self._waypoints = None
+        self._waypoints: pd.DataFrame | None = None
 
     @property
     def tags(self):
