@@ -112,7 +112,7 @@ class Track(MapPlottable):
             + cave_entrances_in_area
         )
 
-        min_distance = 30 / 40_000_000 * 360  # roughly 30 meters to degrees
+        min_distance = 40 / 40_000_000 * 360  # roughly 40 meters to degrees
 
         seen_names = set()
         close_landmarks = []
