@@ -91,6 +91,15 @@ class GeoLocator(object):
         )
 
     @staticmethod
+    def get_name(tags):
+        if "name:de" in tags:
+            return tags["name:de"]
+        elif "name" in tags:
+            return tags["name"]
+        else:
+            return None
+
+    @staticmethod
     @_cache.memoize()
     def get_named_elements(map_section: MapSection, type_, attribute):
         extended_map_section = map_section.enlarge_absolute(
@@ -111,7 +120,7 @@ out;
             if "name" in node.tags:
                 elements.append(
                     {
-                        "name": node.tags["name"],
+                        "name": GeoLocator.get_name(node.tags),
                         "nodes": [{"latitude": node.lat, "longitude": node.lon}],
                         "tags": node.tags,
                     }
@@ -121,7 +130,7 @@ out;
             if "name" in way.tags:
                 elements.append(
                     {
-                        "name": way.tags["name"],
+                        "name": GeoLocator.get_name(way.tags),
                         "nodes": [
                             {
                                 "latitude": nodes_by_id[node.id].lat,
@@ -139,7 +148,7 @@ out;
             if "name" in relation.tags:
                 elements.append(
                     {
-                        "name": relation.tags["name"],
+                        "name": GeoLocator.get_name(relation.tags),
                         "nodes": [
                             {
                                 "latitude": nodes_by_id[node.id].lat,
