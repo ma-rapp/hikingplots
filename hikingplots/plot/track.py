@@ -128,24 +128,55 @@ class Track(MapPlottable):
             # find all waypoints that are close to any of the landmark nodes
             # close means within min_distance in both latitude and longitude
             waypoints = self.waypoints[["latitude", "longitude"]].to_numpy()
-            distance = waypoints[:, np.newaxis, :] - landmark_nodes[np.newaxis, :, :]
-            abs_distance = np.abs(distance)
-            close = (abs_distance[:, :, 0] < min_distance) & (
-                abs_distance[:, :, 1] < min_distance
-            )  # shape (n_waypoints, n_nodes)
-            close_waypoint_indices = np.where(close.any(axis=1))[0]
+            # Process waypoints in batches to avoid memory issues
+            batch_size = 1000
+            close_waypoint_indices = []
+            for waypoint_start_idx in range(0, waypoints.shape[0], batch_size):
+                waypoint_end_idx = min(
+                    waypoint_start_idx + batch_size, waypoints.shape[0]
+                )
+                waypoint_batch = waypoints[waypoint_start_idx:waypoint_end_idx]
+
+                for landmark_batch_idx in range(0, landmark_nodes.shape[0], batch_size):
+                    landmark_batch_end_idx = min(
+                        landmark_batch_idx + batch_size, landmark_nodes.shape[0]
+                    )
+                    landmark_batch = landmark_nodes[
+                        landmark_batch_idx:landmark_batch_end_idx
+                    ]
+
+                    distance = (
+                        waypoint_batch[:, np.newaxis, :]
+                        - landmark_batch[np.newaxis, :, :]
+                    )
+                    abs_distance = np.abs(distance)
+                    close = (abs_distance[:, :, 0] < min_distance) & (
+                        abs_distance[:, :, 1] < min_distance
+                    )  # shape (batch_size, n_nodes_in_batch)
+                    batch_indices = np.where(close.any(axis=1))[0]
+                    # Adjust indices to refer to the original waypoints array
+                    close_waypoint_indices.extend(batch_indices + waypoint_start_idx)
 
             # add the landmark if we found any close waypoints
-            if close_waypoint_indices.size > 0:
+            if close_waypoint_indices:
                 close_landmarks.append(
                     {
                         "name": landmark["name"],
-                        "first_waypoint_index": close_waypoint_indices.min(),
+                        "first_waypoint_index": min(close_waypoint_indices),
                     }
                 )
 
         close_landmarks.sort(key=lambda landmark: landmark["first_waypoint_index"])
-        return [landmark["name"] for landmark in close_landmarks]
+        landmark_names = [landmark["name"] for landmark in close_landmarks]
+
+        # remove duplicates while preserving order
+        seen = set()
+        unique_landmark_names = []
+        for name in landmark_names:
+            if name not in seen:
+                unique_landmark_names.append(name)
+                seen.add(name)
+        return unique_landmark_names
 
     @property
     def bounding_box(self) -> MapSection:
