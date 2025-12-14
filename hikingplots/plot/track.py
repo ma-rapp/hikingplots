@@ -114,38 +114,36 @@ class Track(MapPlottable):
 
         min_distance = 40 / 40_000_000 * 360  # roughly 40 meters to degrees
 
-        seen_names = set()
         close_landmarks = []
         for landmark in landmarks:
-            first_waypoint_index = None
-            for node in landmark["nodes"]:
-                waypoints = self.waypoints.copy()
-                waypoints["rel_latitude"] = waypoints["latitude"] - float(
-                    node["latitude"]
-                )
-                waypoints["rel_longitude"] = waypoints["longitude"] - float(
-                    node["longitude"]
-                )
-                waypoints["rel_latitude"] = abs(waypoints["rel_latitude"])
-                waypoints["rel_longitude"] = abs(waypoints["rel_longitude"])
-                close = (waypoints["rel_latitude"] < min_distance) & (
-                    waypoints["rel_longitude"] < min_distance
-                )
-                if close.any():
-                    if first_waypoint_index is None:
-                        first_waypoint_index = waypoints.index[close].min()
-                    else:
-                        first_waypoint_index = min(
-                            first_waypoint_index, waypoints.index[close].min()
-                        )
-            if first_waypoint_index is not None and landmark["name"] not in seen_names:
+            if len(landmark["nodes"]) == 0:
+                continue
+            landmark_nodes = np.array(
+                [
+                    (float(node["latitude"]), float(node["longitude"]))
+                    for node in landmark["nodes"]
+                ]
+            )
+
+            # find all waypoints that are close to any of the landmark nodes
+            # close means within min_distance in both latitude and longitude
+            waypoints = self.waypoints[["latitude", "longitude"]].to_numpy()
+            distance = waypoints[:, np.newaxis, :] - landmark_nodes[np.newaxis, :, :]
+            abs_distance = np.abs(distance)
+            close = (abs_distance[:, :, 0] < min_distance) & (
+                abs_distance[:, :, 1] < min_distance
+            )  # shape (n_waypoints, n_nodes)
+            close_waypoint_indices = np.where(close.any(axis=1))[0]
+
+            # add the landmark if we found any close waypoints
+            if close_waypoint_indices.size > 0:
                 close_landmarks.append(
                     {
                         "name": landmark["name"],
-                        "first_waypoint_index": first_waypoint_index,
+                        "first_waypoint_index": close_waypoint_indices.min(),
                     }
                 )
-                seen_names.add(landmark["name"])
+
         close_landmarks.sort(key=lambda landmark: landmark["first_waypoint_index"])
         return [landmark["name"] for landmark in close_landmarks]
 
