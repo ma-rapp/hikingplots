@@ -1,0 +1,22 @@
+name: Run tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: |
+          uv sync
+      - name: Run tests
+        run: |
+          PYTHONPATH=`pwd` uv run pytest -v
