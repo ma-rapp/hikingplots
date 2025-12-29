@@ -17,6 +17,7 @@ class Track(MapPlottable):
         self,
         gpx,
         who: list[str] = None,
+        track_type: str = "hiking",
         color="black",
         plot_width_scale=1,
         plot_solid=False,
@@ -27,6 +28,7 @@ class Track(MapPlottable):
         super().__init__()
         self._gpx = gpx
         self._who = who if who is not None else []
+        self._track_type = track_type
         self._color = color
         self._plot_width_scale = plot_width_scale
         self._plot_solid = plot_solid
@@ -38,6 +40,10 @@ class Track(MapPlottable):
     @property
     def who(self) -> list[str]:
         return self._who
+
+    @property
+    def track_type(self) -> str:
+        return self._track_type
 
     @property
     def waypoints(self) -> pd.DataFrame:
@@ -295,7 +301,13 @@ class Track(MapPlottable):
             who = metadata.get("who", [])
 
             with open(gpx_filename, "r") as f:
-                return cls(gpxpy.parse(f), who=who, color=color, **kwargs)
+                return cls(
+                    gpxpy.parse(f),
+                    who=who,
+                    track_type=track_type,
+                    color=color,
+                    **kwargs,
+                )
         else:
             return None
 
