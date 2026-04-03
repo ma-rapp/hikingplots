@@ -34,6 +34,7 @@ def cli():
     type=click.Path(exists=True),
 )
 @click.option("--tag", help="Limit the plot to a specific tag", type=str)
+@click.option("--who", help="Limit the plot to a specific person", type=str)
 @click.option("--no-terrain", is_flag=True)
 @click.option("--no-water", is_flag=True)
 @click.option("--no-tracks", is_flag=True)

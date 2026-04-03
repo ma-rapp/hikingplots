@@ -1,6 +1,7 @@
 import datetime
 import tempfile
 
+import pytest
 import yaml
 from gpxpy.gpx import GPX, GPXTrack, GPXTrackPoint, GPXTrackSegment
 
@@ -47,6 +48,37 @@ def test_load_from_folder():
     assert track.track_type == "hiking"
     assert track.who == ["Alice", "Bob"]
     assert len(track.waypoints) == 1
+
+
+@pytest.mark.parametrize(
+    "limit_tag, limit_who",
+    [
+        (None, None),
+        ("test", None),
+        (None, "Alice"),
+        ("test", "Alice"),
+        ("other", None),
+        (None, "Charlie"),
+        ("other", "Charlie"),
+    ],
+)
+def test_load_tracks_limit_tag_who(limit_tag: str | None, limit_who: str | None):
+    gpx = _gpx(
+        [
+            (47.465850, 10.508765, "2025-01-01T10:00:00Z"),
+        ]
+    )
+    metadata = {"type": "hiking", "tags": ["test"], "who": ["Alice", "Bob"]}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(f"{tmpdir}/test.gpx", "w") as gpx_file:
+            gpx_file.write(gpx.to_xml())
+        with open(f"{tmpdir}/metadata.yaml", "w") as metadata_file:
+            yaml.dump(metadata, metadata_file)
+        track = Track.from_folder(tmpdir, limit_tag=limit_tag, limit_who=limit_who)
+
+    should_load = limit_tag in [None, "test"] and limit_who in [None, "Alice", "Bob"]
+
+    assert (track is not None) == should_load
 
 
 def test_track_properties():
