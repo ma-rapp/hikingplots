@@ -12,6 +12,7 @@ from .track import Track
 def plot_area(
     tracks_path: pathlib.Path | str,
     tag: str | None,
+    who: str | None,
     topo_land_path: pathlib.Path | str,
     topo_water_path: pathlib.Path | str,
     no_terrain: bool,
@@ -28,6 +29,7 @@ def plot_area(
             Track.load_many(
                 pathlib.Path(tracks_path),
                 limit_tag=tag,
+                limit_who=who,
                 plot_width_scale=track_plot_width_scale,
                 plot_solid=track_plot_solid,
             )

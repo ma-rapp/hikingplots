@@ -276,7 +276,8 @@ class Track(MapPlottable):
     def from_folder(
         cls,
         path: Union[str, pathlib.Path],
-        limit_tag=None,
+        limit_tag: str | None = None,
+        limit_who: str | None = None,
         colormap=None,
         **kwargs,
     ):
@@ -297,6 +298,10 @@ class Track(MapPlottable):
 
             if limit_tag is not None:
                 if limit_tag not in metadata.get("tags", []):
+                    return None
+
+            if limit_who is not None:
+                if limit_who not in metadata.get("who", []):
                     return None
 
             track_type = metadata.get("type", "hiking")
