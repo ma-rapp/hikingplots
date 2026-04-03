@@ -83,6 +83,10 @@ class Track(MapPlottable):
         return self.first_waypoint["time"].month
 
     @property
+    def day(self):
+        return self.first_waypoint["time"].day
+
+    @property
     def start_address(self):
         coord = (self.first_waypoint["latitude"], self.first_waypoint["longitude"])
         address = GeoLocator.lookup(*coord).raw["address"]
