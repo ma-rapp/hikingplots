@@ -47,3 +47,15 @@ def test_load_from_folder():
     assert track.track_type == "hiking"
     assert track.who == ["Alice", "Bob"]
     assert len(track.waypoints) == 1
+
+
+def test_track_properties():
+    gpx = _gpx(
+        [
+            (47.465850, 10.508765, "2025-01-02T10:00:00Z"),
+        ]
+    )
+    track = Track(gpx)
+    assert track.year == 2025
+    assert track.month == 1
+    assert track.day == 2
