@@ -10,9 +10,6 @@ class MapScale(MapPlottableUsingMatplotlib):
         self._line_width_scale = 1
         self._color = "black"
 
-    def get_plot_id(self):
-        return None
-
     def iterate_nice_distances(self):
         v = 1
         while True:

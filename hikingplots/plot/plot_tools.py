@@ -21,10 +21,6 @@ class MapPlottable(ABC):
     """
 
     @abstractmethod
-    def get_plot_id(self):
-        pass
-
-    @abstractmethod
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition
     ) -> np.ndarray:

@@ -199,17 +199,6 @@ class Track(MapPlottableUsingMatplotlib):
             west_longitude=self.waypoints["longitude"].min(),
         )
 
-    def get_plot_id(self):
-        return (
-            self._gpx.tracks[0].name,
-            self._plot_solid,
-            self._plot_width_scale,
-            self._color,
-            self._plot_start,
-            self._plot_end,
-            self._draw_partial_track,
-        )
-
     def _plot_on_fig(
         self,
         map_section: MapSection,

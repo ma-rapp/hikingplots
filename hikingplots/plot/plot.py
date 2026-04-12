@@ -35,7 +35,6 @@ def plot_area(
             )
         )
         ind.print_info(f"found {len(tracks)} tracks")
-        tracks = sorted(tracks, key=lambda track: track.get_plot_id())
 
     with step_indicator_cls("Getting area of interest"):
         area_of_interest = MapSection.create_envelope(

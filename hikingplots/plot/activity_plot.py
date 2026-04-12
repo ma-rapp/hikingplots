@@ -62,41 +62,23 @@ class ActivityPlot:
         )
         return pixels_per_degree_latitude
 
-    @staticmethod
-    def _cached_plot(
-        *, area_of_interest, plot_definition, ids, plottables: Sequence[MapPlottable]
-    ):
-        if len(plottables) == 1:
-            return plottables[0].plot(area_of_interest, plot_definition)
-        else:
-            plotted = ActivityPlot._cached_plot(
-                area_of_interest=area_of_interest,
-                plot_definition=plot_definition,
-                ids=ids[:-1],
-                plottables=plottables[:-1],
-            )
-            return overlay_alpha(
-                plotted, plottables[-1].plot(area_of_interest, plot_definition)
-            )
-
     def plot(self, plottable: Union[MapPlottable, Sequence[MapPlottable]]) -> None:
         if isinstance(plottable, MapPlottable):
             plottables = [plottable]
         else:
             plottables = plottable
-        ids = [p.get_plot_id() for p in plottables]
+
+        assert len(plottables) > 0, "At least one plottable is required"
+
         plot_definition = PlotDefinition(
             width=self.plot_area_width,
             height=self.plot_area_height,
             antialiased=self.antialiased,
         )
-        plotted = ActivityPlot._cached_plot(
-            area_of_interest=self.area_of_interest,
-            plot_definition=plot_definition,
-            ids=ids,
-            plottables=plottables,
-        )
-        self.plot_area = overlay_alpha(self.plot_area, plotted)
+        for plottable in plottables:
+            self.plot_area = overlay_alpha(
+                self.plot_area, plottable.plot(self.area_of_interest, plot_definition)
+            )
 
     def convert_to_duotone(self, mode=None):
         self.plot_area = convert_to_duotone(self.plot_area, mode=mode)

@@ -39,9 +39,6 @@ class LandTopography(MapPlottable):
         )
         self.topography_data = topography_data
 
-    def get_plot_id(self):
-        return ("land", str(self.topography_data.area))
-
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition
     ) -> np.ndarray:
@@ -243,13 +240,6 @@ class ContourLandTopography(MapPlottableUsingMatplotlib, LandTopography):
         self._draw_zero_level = draw_zero_level
         self._draw_major_level_labels = draw_major_level_labels
 
-    def get_plot_id(self):
-        return super().get_plot_id() + (
-            self._major_level_step_size,
-            self._minor_level_step_size,
-            self._draw_major_level_labels,
-        )
-
     def _get_levels(self, vmin: float, vmax: float, step_size: int):
         min_level = (vmin // step_size) * step_size
         levels = [min_level]
@@ -325,9 +315,6 @@ class WaterTopography(MapPlottableUsingMatplotlib):
         self.area = area
         self.color = color
         self.plot_width_scale = plot_width_scale
-
-    def get_plot_id(self):
-        return ("water", str(self.area), self.color, self.plot_width_scale)
 
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition
