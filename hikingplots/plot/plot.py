@@ -173,7 +173,6 @@ def plot_track_duotone(
                 major_level_step_size=200,
                 minor_level_step_size=50,
                 draw_major_level_labels=draw_major_level_labels,
-                draw_hillshade=False,
             )
 
         with step_indicator_cls("Loading water topography"):

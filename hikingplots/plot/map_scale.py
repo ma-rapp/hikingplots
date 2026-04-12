@@ -1,11 +1,10 @@
-import numpy as np
 from matplotlib import pyplot as plt
 
 from .map import MapSection
-from .plot_tools import MapPlottable, PlotDefinition, plt_to_numpy
+from .plot_tools import MapPlottableUsingMatplotlib, PlotDefinition
 
 
-class MapScale(MapPlottable):
+class MapScale(MapPlottableUsingMatplotlib):
     def __init__(self):
         super().__init__()
         self._line_width_scale = 1
@@ -28,27 +27,19 @@ class MapScale(MapPlottable):
         else:
             return f"{distance_m // 1000} km"
 
-    def plot(
-        self, map_section: MapSection, plot_definition: PlotDefinition
-    ) -> np.ndarray:
-        fig_scale = 100.0
-        fig = plt.figure(
-            figsize=(
-                (plot_definition.width + 0.1) / fig_scale,
-                (plot_definition.height + 0.1) / fig_scale,
-            ),
-            dpi=100,
-        )
+    def _plot_on_fig(
+        self,
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        ax: plt.Axes,
+        one_pixel: float,
+    ) -> None:
+        ax.set_xlim([0, plot_definition.width])
+        ax.set_ylim([0, plot_definition.height])
 
-        ONE_PIXEL = (
-            72
-            / fig_scale  # linewidth is in points, there are 72 points per inch, 1 pixel per inch
-        )
-        linewidth = 2 * ONE_PIXEL * self._line_width_scale
+        linewidth = 2 * one_pixel * self._line_width_scale
 
-        ax = fig.add_axes([0, 0, 1, 1])
-
-        margin_left_right = 20 * ONE_PIXEL
+        margin_left_right = 20 * one_pixel
         pos_left = margin_left_right
 
         for width_m in self.iterate_nice_distances():
@@ -58,10 +49,10 @@ class MapScale(MapPlottable):
 
         pos_right = pos_left + width_rel * plot_definition.width
 
-        pos_y = 10 * ONE_PIXEL
-        winglet = 5 * ONE_PIXEL
+        pos_y = 10 * one_pixel
+        winglet = 5 * one_pixel
 
-        plt.plot(
+        ax.plot(
             [pos_left, pos_right],
             [pos_y, pos_y],
             linewidth=linewidth,
@@ -69,14 +60,14 @@ class MapScale(MapPlottable):
             antialiased=plot_definition.antialiased,
         )
         # winglets
-        plt.plot(
+        ax.plot(
             [pos_left, pos_left],
             [pos_y - winglet, pos_y + winglet],
             linewidth=linewidth,
             color=self._color,
             antialiased=plot_definition.antialiased,
         )
-        plt.plot(
+        ax.plot(
             [pos_right, pos_right],
             [pos_y - winglet, pos_y + winglet],
             linewidth=linewidth,
@@ -85,9 +76,9 @@ class MapScale(MapPlottable):
         )
 
         # text
-        t = plt.text(
+        t = ax.text(
             (pos_left + pos_right) / 2,
-            pos_y + 4 * ONE_PIXEL,
+            pos_y + 4 * one_pixel,
             self.format_distance(width_m),
             fontsize=18,
             antialiased=plot_definition.antialiased,
@@ -97,19 +88,10 @@ class MapScale(MapPlottable):
         t.set_bbox(dict(facecolor="white", edgecolor="white"))
 
         # white bakground
-        plt.fill_between(
+        ax.fill_between(
             [pos_left - margin_left_right, pos_right + margin_left_right],
             0,
-            pos_y + 20 * ONE_PIXEL,
+            pos_y + 20 * one_pixel,
             color="white",
             zorder=-2,
         )
-
-        ax.set_xlim([0, plot_definition.width])
-        ax.set_ylim([0, plot_definition.height])
-        ax.set_axis_off()
-
-        result = plt_to_numpy(fig, dpi=100)
-        plt.close(fig)
-
-        return result

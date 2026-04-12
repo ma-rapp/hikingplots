@@ -4,7 +4,6 @@ import re
 from dataclasses import dataclass
 
 import diskcache
-import earthpy.spatial as es
 import geopandas as gpd
 import lxml.etree
 import matplotlib
@@ -19,10 +18,9 @@ from rasterio.windows import Window
 from .map import MapSection
 from .plot_tools import (
     MapPlottable,
+    MapPlottableUsingMatplotlib,
     PlotDefinition,
-    convert_to_duotone,
     overlay_alpha,
-    plt_to_numpy,
 )
 
 
@@ -230,14 +228,13 @@ class LandTopography(MapPlottable):
         return cls(topography_data=topography_data, **kwargs)
 
 
-class ContourLandTopography(LandTopography):
+class ContourLandTopography(MapPlottableUsingMatplotlib, LandTopography):
     def __init__(
         self,
         major_level_step_size: int = 100,
         minor_level_step_size: int = 20,
         draw_zero_level: bool = False,
         draw_major_level_labels: bool = True,
-        draw_hillshade: bool = True,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -245,7 +242,6 @@ class ContourLandTopography(LandTopography):
         self._minor_level_step_size = minor_level_step_size
         self._draw_zero_level = draw_zero_level
         self._draw_major_level_labels = draw_major_level_labels
-        self._draw_hillshade = draw_hillshade
 
     def get_plot_id(self):
         return super().get_plot_id() + (
@@ -261,20 +257,14 @@ class ContourLandTopography(LandTopography):
             levels.append(levels[-1] + step_size)
         return levels
 
-    def plot(
-        self, map_section: MapSection, plot_definition: PlotDefinition
-    ) -> np.ndarray:
+    def _plot_on_fig(
+        self,
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        ax: plt.Axes,
+        one_pixel: float,
+    ) -> None:
         height_map = self.get_scaled_height_map(map_section, plot_definition)
-
-        fig = plt.figure(
-            figsize=(
-                (plot_definition.width + 0.1) / 100.0,
-                (plot_definition.height + 0.1) / 100.0,
-            ),
-            dpi=100,
-        )
-
-        ax = fig.add_axes([0, 0, 1, 1])
 
         major_levels = self._get_levels(
             height_map.min(), height_map.max(), self._major_level_step_size
@@ -292,6 +282,9 @@ class ContourLandTopography(LandTopography):
         if not self._draw_zero_level:
             major_levels = [level for level in major_levels if level != 0]
             minor_levels = [level for level in minor_levels if level != 0]
+
+        ax.set_xlim([0, height_map.shape[1]])
+        ax.set_ylim([0, height_map.shape[0]])
 
         ax.contour(
             height_map[::-1],
@@ -314,30 +307,8 @@ class ContourLandTopography(LandTopography):
             for label in labels:
                 label.set_antialiased(plot_definition.antialiased)
 
-        ax.set_xlim([0, height_map.shape[1]])
-        ax.set_ylim([0, height_map.shape[0]])
-        ax.set_axis_off()
 
-        result = plt_to_numpy(fig, dpi=100)
-        plt.close(fig)
-
-        if self._draw_hillshade:
-            hillshade = es.hillshade(height_map)
-            hillshade = hillshade[:, :, None].repeat(4, axis=2).astype(np.float32)
-            hillshade = hillshade / 255
-            hillshade = (
-                0.4 * hillshade + 0.7
-            )  # turn brightness up -> fewer black pixels
-            hillshade[hillshade < 0] = 0
-            hillshade[hillshade > 1] = 1
-            hillshade_duotone = convert_to_duotone(hillshade, mode="noise")
-
-            return overlay_alpha(hillshade_duotone, result)
-        else:
-            return result
-
-
-class WaterTopography(MapPlottable):
+class WaterTopography(MapPlottableUsingMatplotlib):
     _cache = diskcache.Cache("cache/water_topography")
 
     def __init__(
@@ -361,39 +332,31 @@ class WaterTopography(MapPlottable):
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition
     ) -> np.ndarray:
-        fig = plt.figure(
-            figsize=(
-                (plot_definition.width + 0.1) / 100.0,
-                (plot_definition.height + 0.1) / 100.0,
-            ),
-            dpi=100,
+        water_bodies = MapPlottableUsingMatplotlib.plot(
+            self, map_section, plot_definition
         )
 
-        ax = fig.add_axes([0, 0, 1, 1])
+        ocean = self.render_ocean(map_section, plot_definition)
+        return overlay_alpha(water_bodies, ocean)
 
-        ONE_PIXEL = (
-            72
-            / 100.0  # linewidth is in points, there are 72 points per inch, 1 pixel per inch
-        )
+    def _plot_on_fig(
+        self,
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        ax: plt.Axes,
+        one_pixel: float,
+    ) -> None:
+        ax.set_xlim([map_section.west_longitude, map_section.east_longitude])
+        ax.set_ylim([map_section.south_latitude, map_section.north_latitude])
 
         for water_body in self.water_bodies:
             water_body.plot(
                 ax=ax,
                 color=self.color,
-                linewidth=self.plot_width_scale * ONE_PIXEL,
+                linewidth=self.plot_width_scale * one_pixel,
                 aspect=None,
                 antialiased=plot_definition.antialiased,
             )
-
-        ax.set_xlim([map_section.west_longitude, map_section.east_longitude])
-        ax.set_ylim([map_section.south_latitude, map_section.north_latitude])
-        ax.set_axis_off()
-
-        result = plt_to_numpy(fig, dpi=100)
-        plt.close(fig)
-
-        ocean = self.render_ocean(map_section, plot_definition)
-        return overlay_alpha(result, ocean)
 
     def render_ocean(
         self,

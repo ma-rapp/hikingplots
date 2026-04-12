@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .map import MapSection
 
@@ -28,6 +29,48 @@ class MapPlottable(ABC):
         self, map_section: MapSection, plot_definition: PlotDefinition
     ) -> np.ndarray:
         pass
+
+
+class MapPlottableUsingMatplotlib(MapPlottable):
+    """
+    A MapPlottable that uses matplotlib to create the plot.
+    """
+
+    def plot(
+        self, map_section: MapSection, plot_definition: PlotDefinition
+    ) -> np.ndarray:
+        fig_scale = 100.0
+        fig = plt.figure(
+            figsize=(
+                (plot_definition.width + 0.1) / fig_scale,
+                (plot_definition.height + 0.1) / fig_scale,
+            ),
+            dpi=100,
+        )
+
+        one_pixel = (
+            72
+            / fig_scale  # linewidth is in points, there are 72 points per inch, 1 pixel per inch
+        )
+        ax = fig.add_axes([0, 0, 1, 1])
+
+        self._plot_on_fig(map_section, plot_definition, ax, one_pixel)
+
+        ax.set_axis_off()
+
+        result = plt_to_numpy(fig, dpi=100)
+        plt.close(fig)
+
+        return result
+
+    @abstractmethod
+    def _plot_on_fig(
+        self,
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        ax: plt.Axes,
+        one_pixel: float,
+    ) -> None: ...
 
 
 def overlay_alpha(first, second):
