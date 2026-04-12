@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 import diskcache
+import earthpy.spatial as es
 import geopandas as gpd
 import lxml.etree
 import matplotlib
@@ -75,47 +76,11 @@ class LandTopography(MapPlottable):
         height_map = height_map.astype(np.float32)
         height_map /= 10  # scale down to reduce exaggerating illumination differences
 
-        x, y = np.gradient(height_map)
-
-        # terrain slope angle measured from horizontal plane, between 0 and pi/2
-        terrain_slope = np.arctan(np.sqrt(x * x + y * y))
-        # terrain normal azimuth angle between 0 and 2*pi, measured clockwise from north
-        terrain_normal_azimuth = (np.pi / 2.0 - np.arctan2(x, -y)) % (2 * np.pi)
-        # terrain normal elevation angle measured from horizontal plane, between 0 and pi/2
-        terrain_normal_elevation = np.pi / 2.0 - terrain_slope
-
-        sun_azimuth = sun_azimuth_degree * np.pi / 180.0
-        sun_elevation = sun_elevation_degree * np.pi / 180.0
-
-        # We have two vectors
-        # - the sun vector (sun_azimuth, sun_elevation)
-        # - the terrain normal vector (terrain_normal_azimuth, terrain_normal_elevation)
-        # We want to compute the the cosine of the angle between these two to apply Lambert’s Cosine Law.
-
-        # Convert sun vector to Cartesian coordinates
-        sun_x = np.cos(sun_elevation) * np.sin(sun_azimuth)
-        sun_y = np.cos(sun_elevation) * np.cos(sun_azimuth)
-        sun_z = np.sin(sun_elevation)
-
-        # Convert terrain normal vector to Cartesian coordinates
-        terrain_normal_x = np.cos(terrain_normal_elevation) * np.sin(
-            terrain_normal_azimuth
+        hillshade = es.hillshade(
+            height_map, azimuth=sun_azimuth_degree, altitude=sun_elevation_degree
         )
-        terrain_normal_y = np.cos(terrain_normal_elevation) * np.cos(
-            terrain_normal_azimuth
-        )
-        terrain_normal_z = np.sin(terrain_normal_elevation)
-
-        # Compute the dot product between sun vector and terrain normal vector
-        lambert_cosine = (
-            sun_x * terrain_normal_x
-            + sun_y * terrain_normal_y
-            + sun_z * terrain_normal_z
-        )
-
-        illumination = np.clip(lambert_cosine, 0, 1)
-        illumination = illumination * 0.5 + 0.5  # turn brightness up a bit
-        return illumination.astype(np.float32)
+        hillshade = hillshade.astype(np.float32) / 255.0
+        return hillshade
 
     def get_scaled_height_map_with_padding(
         self, area: MapSection, plot_definition: PlotDefinition
