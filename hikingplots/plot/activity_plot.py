@@ -4,7 +4,13 @@ import numpy as np
 from PIL import Image
 
 from .map import MapSection
-from .plot_tools import MapPlottable, PlotDefinition, convert_to_duotone, overlay_alpha
+from .plot_tools import (
+    MapPlottable,
+    MapPlottableUsingMatplotlib,
+    PlotDefinition,
+    convert_to_duotone,
+    overlay_alpha,
+)
 
 
 class ActivityPlot:
@@ -75,10 +81,23 @@ class ActivityPlot:
             height=self.plot_area_height,
             antialiased=self.antialiased,
         )
-        for plottable in plottables:
+
+        if all(
+            isinstance(plottable, MapPlottableUsingMatplotlib)
+            for plottable in plottables
+        ):
             self.plot_area = overlay_alpha(
-                self.plot_area, plottable.plot(self.area_of_interest, plot_definition)
+                self.plot_area,
+                MapPlottableUsingMatplotlib.plot_many(
+                    self.area_of_interest, plot_definition, plottables
+                ),
             )
+        else:
+            for plottable in plottables:
+                self.plot_area = overlay_alpha(
+                    self.plot_area,
+                    plottable.plot(self.area_of_interest, plot_definition),
+                )
 
     def convert_to_duotone(self, mode=None):
         self.plot_area = convert_to_duotone(self.plot_area, mode=mode)

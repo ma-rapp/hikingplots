@@ -32,8 +32,11 @@ class MapPlottableUsingMatplotlib(MapPlottable):
     A MapPlottable that uses matplotlib to create the plot.
     """
 
-    def plot(
-        self, map_section: MapSection, plot_definition: PlotDefinition
+    @staticmethod
+    def plot_many(
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        plottables: list[MapPlottable],
     ) -> np.ndarray:
         fig_scale = 100.0
         fig = plt.figure(
@@ -50,7 +53,8 @@ class MapPlottableUsingMatplotlib(MapPlottable):
         )
         ax = fig.add_axes([0, 0, 1, 1])
 
-        self._plot_on_fig(map_section, plot_definition, ax, one_pixel)
+        for plottable in plottables:
+            plottable.plot_on_fig(map_section, plot_definition, ax, one_pixel)
 
         ax.set_axis_off()
 
@@ -59,8 +63,15 @@ class MapPlottableUsingMatplotlib(MapPlottable):
 
         return result
 
+    def plot(
+        self, map_section: MapSection, plot_definition: PlotDefinition
+    ) -> np.ndarray:
+        return MapPlottableUsingMatplotlib.plot_many(
+            map_section, plot_definition, [self]
+        )
+
     @abstractmethod
-    def _plot_on_fig(
+    def plot_on_fig(
         self,
         map_section: MapSection,
         plot_definition: PlotDefinition,

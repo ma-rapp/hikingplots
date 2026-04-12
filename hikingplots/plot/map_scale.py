@@ -24,7 +24,7 @@ class MapScale(MapPlottableUsingMatplotlib):
         else:
             return f"{distance_m // 1000} km"
 
-    def _plot_on_fig(
+    def plot_on_fig(
         self,
         map_section: MapSection,
         plot_definition: PlotDefinition,

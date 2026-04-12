@@ -199,7 +199,7 @@ class Track(MapPlottableUsingMatplotlib):
             west_longitude=self.waypoints["longitude"].min(),
         )
 
-    def _plot_on_fig(
+    def plot_on_fig(
         self,
         map_section: MapSection,
         plot_definition: PlotDefinition,

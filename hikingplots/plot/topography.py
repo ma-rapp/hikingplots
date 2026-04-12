@@ -247,7 +247,7 @@ class ContourLandTopography(MapPlottableUsingMatplotlib, LandTopography):
             levels.append(levels[-1] + step_size)
         return levels
 
-    def _plot_on_fig(
+    def plot_on_fig(
         self,
         map_section: MapSection,
         plot_definition: PlotDefinition,
@@ -298,7 +298,7 @@ class ContourLandTopography(MapPlottableUsingMatplotlib, LandTopography):
                 label.set_antialiased(plot_definition.antialiased)
 
 
-class WaterTopography(MapPlottableUsingMatplotlib):
+class WaterTopography(MapPlottable):
     _cache = diskcache.Cache("cache/water_topography")
 
     def __init__(
@@ -319,14 +319,14 @@ class WaterTopography(MapPlottableUsingMatplotlib):
     def plot(
         self, map_section: MapSection, plot_definition: PlotDefinition
     ) -> np.ndarray:
-        water_bodies = MapPlottableUsingMatplotlib.plot(
-            self, map_section, plot_definition
+        water_bodies = MapPlottableUsingMatplotlib.plot_many(
+            map_section, plot_definition, [self]
         )
 
         ocean = self.render_ocean(map_section, plot_definition)
         return overlay_alpha(water_bodies, ocean)
 
-    def _plot_on_fig(
+    def plot_on_fig(
         self,
         map_section: MapSection,
         plot_definition: PlotDefinition,
