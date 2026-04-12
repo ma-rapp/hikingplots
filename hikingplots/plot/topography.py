@@ -50,36 +50,77 @@ class LandTopography(MapPlottable):
         height_map = self.get_scaled_height_map(map_section, plot_definition)
 
         terrain_base_color = self.render_terrain_base_color(height_map)
-        terrain_hillshade = self.render_terrain_hillshade(height_map)
-        terrain_hillshade[:, :, 3] = 0.6
-        terrain = overlay_alpha(terrain_base_color, terrain_hillshade)
+        terrain_illumination = self.get_terrain_illumination_hillshade(height_map)
+
+        terrain = terrain_base_color * terrain_illumination[:, :, None]
+        terrain[:, :, 3] = 1
 
         return terrain
 
     def render_terrain_base_color(self, height_map: np.ndarray) -> np.ndarray:
         cmap = matplotlib.cm.get_cmap("terrain")
         norm = matplotlib.colors.Normalize(vmin=-1000, vmax=2500)
-        return cmap(norm(height_map)).astype(np.float32)
+        color = cmap(norm(height_map)).astype(np.float32)
 
-    def render_terrain_hillshade(
+        # dampen a bit
+        color = color * 0.8 + 0.1
+
+        return color
+
+    def get_terrain_illumination_hillshade(
         self,
         height_map: np.ndarray,
-        azimuth: float = 30.0,
-        angle_altitude: float = 30.0,
+        sun_azimuth_degree: float = 315.0,  # measured clockwise from north
+        sun_elevation_degree: float = 45.0,  # measured from horizontal plane
     ) -> np.ndarray:
-        x, y = np.gradient(height_map)
-        slope = np.pi / 2.0 - np.arctan(np.sqrt(x * x + y * y))
-        aspect = np.arctan2(-x, y)
-        azimuthrad = azimuth * np.pi / 180.0
-        altituderad = angle_altitude * np.pi / 180.0
-        shaded = np.sin(altituderad) * np.sin(slope) + np.cos(altituderad) * np.cos(
-            slope
-        ) * np.cos(azimuthrad - aspect)
+        """
+        Return a 2D array in the range [0, 1] representing the
+        illumination of the terrain based on Lambert’s Cosine Law.
+        """
+        height_map = height_map.astype(np.float32)
+        height_map /= 10  # scale down to reduce exaggerating illumination differences
 
-        cmap = matplotlib.cm.get_cmap("Greys")
-        norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
-        shade_colors = cmap(norm(shaded))
-        return shade_colors.astype(np.float32)
+        x, y = np.gradient(height_map)
+
+        # terrain slope angle measured from horizontal plane, between 0 and pi/2
+        terrain_slope = np.arctan(np.sqrt(x * x + y * y))
+        # terrain normal azimuth angle between 0 and 2*pi, measured clockwise from north
+        terrain_normal_azimuth = (np.pi / 2.0 - np.arctan2(x, -y)) % (2 * np.pi)
+        # terrain normal elevation angle measured from horizontal plane, between 0 and pi/2
+        terrain_normal_elevation = np.pi / 2.0 - terrain_slope
+
+        sun_azimuth = sun_azimuth_degree * np.pi / 180.0
+        sun_elevation = sun_elevation_degree * np.pi / 180.0
+
+        # We have two vectors
+        # - the sun vector (sun_azimuth, sun_elevation)
+        # - the terrain normal vector (terrain_normal_azimuth, terrain_normal_elevation)
+        # We want to compute the the cosine of the angle between these two to apply Lambert’s Cosine Law.
+
+        # Convert sun vector to Cartesian coordinates
+        sun_x = np.cos(sun_elevation) * np.sin(sun_azimuth)
+        sun_y = np.cos(sun_elevation) * np.cos(sun_azimuth)
+        sun_z = np.sin(sun_elevation)
+
+        # Convert terrain normal vector to Cartesian coordinates
+        terrain_normal_x = np.cos(terrain_normal_elevation) * np.sin(
+            terrain_normal_azimuth
+        )
+        terrain_normal_y = np.cos(terrain_normal_elevation) * np.cos(
+            terrain_normal_azimuth
+        )
+        terrain_normal_z = np.sin(terrain_normal_elevation)
+
+        # Compute the dot product between sun vector and terrain normal vector
+        lambert_cosine = (
+            sun_x * terrain_normal_x
+            + sun_y * terrain_normal_y
+            + sun_z * terrain_normal_z
+        )
+
+        illumination = np.clip(lambert_cosine, 0, 1)
+        illumination = illumination * 0.5 + 0.5  # turn brightness up a bit
+        return illumination.astype(np.float32)
 
     def get_scaled_height_map_with_padding(
         self, area: MapSection, plot_definition: PlotDefinition
