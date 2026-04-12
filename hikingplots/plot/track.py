@@ -9,10 +9,10 @@ import yaml
 
 from .geolocation import GeoLocator
 from .map import MapSection
-from .plot_tools import MapPlottable, PlotDefinition, plt_to_numpy
+from .plot_tools import MapPlottableUsingMatplotlib, PlotDefinition
 
 
-class Track(MapPlottable):
+class Track(MapPlottableUsingMatplotlib):
     def __init__(
         self,
         gpx,
@@ -199,27 +199,15 @@ class Track(MapPlottable):
             west_longitude=self.waypoints["longitude"].min(),
         )
 
-    def get_plot_id(self):
-        return (
-            self._gpx.tracks[0].name,
-            self._plot_solid,
-            self._plot_width_scale,
-            self._color,
-            self._plot_start,
-            self._plot_end,
-            self._draw_partial_track,
-        )
-
-    def plot(
-        self, map_section: MapSection, plot_definition: PlotDefinition
-    ) -> np.ndarray:
-        fig = plt.figure(figsize=(plot_definition.width, plot_definition.height), dpi=1)
-
-        ax = fig.add_axes([0, 0, 1, 1])
-
-        ONE_PIXEL = (
-            72  # linewidth is in points, there are 72 points per inch, 1 pixel per inch
-        )
+    def plot_on_fig(
+        self,
+        map_section: MapSection,
+        plot_definition: PlotDefinition,
+        ax: plt.Axes,
+        one_pixel: float,
+    ) -> None:
+        ax.set_xlim([map_section.west_longitude, map_section.east_longitude])
+        ax.set_ylim([map_section.south_latitude, map_section.north_latitude])
 
         sigma = 1
         max_width = 4 * sigma if not self._plot_solid else 1
@@ -230,7 +218,7 @@ class Track(MapPlottable):
                 alpha = norm_gaussian(rel_linewidth - 1, sigma=sigma) - norm_gaussian(
                     rel_linewidth, sigma=sigma
                 )
-            linewidth = rel_linewidth * 2 * ONE_PIXEL * self._plot_width_scale
+            linewidth = rel_linewidth * 2 * one_pixel * self._plot_width_scale
             ax.plot(
                 self.waypoints_for_plotting["longitude"],
                 self.waypoints_for_plotting["latitude"],
@@ -249,20 +237,12 @@ class Track(MapPlottable):
             ax.scatter(
                 self.waypoints["longitude"].iloc[idx],
                 self.waypoints["latitude"].iloc[idx],
-                s=150 * ONE_PIXEL * ONE_PIXEL * self._plot_width_scale,
+                s=150 * one_pixel * one_pixel * self._plot_width_scale,
                 c=self._color,
                 marker="o",
                 alpha=1,
                 antialiased=plot_definition.antialiased,
             )
-
-        ax.set_xlim([map_section.west_longitude, map_section.east_longitude])
-        ax.set_ylim([map_section.south_latitude, map_section.north_latitude])
-        ax.set_axis_off()
-
-        result = plt_to_numpy(fig)
-        plt.close(fig)
-        return result
 
     @classmethod
     def load_many(cls, path, **kwargs) -> Generator["Track", None, None]:

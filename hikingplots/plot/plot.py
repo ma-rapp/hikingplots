@@ -35,7 +35,6 @@ def plot_area(
             )
         )
         ind.print_info(f"found {len(tracks)} tracks")
-        tracks = sorted(tracks, key=lambda track: track.get_plot_id())
 
     with step_indicator_cls("Getting area of interest"):
         area_of_interest = MapSection.create_envelope(
@@ -173,7 +172,6 @@ def plot_track_duotone(
                 major_level_step_size=200,
                 minor_level_step_size=50,
                 draw_major_level_labels=draw_major_level_labels,
-                draw_hillshade=False,
             )
 
         with step_indicator_cls("Loading water topography"):
