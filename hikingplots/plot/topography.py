@@ -80,6 +80,10 @@ class LandTopography(MapPlottable):
             height_map, azimuth=sun_azimuth_degree, altitude=sun_elevation_degree
         )
         hillshade = hillshade.astype(np.float32) / 255.0
+
+        # increase brightness a bit
+        hillshade = hillshade * 0.8 + 0.2
+
         return hillshade
 
     def get_scaled_height_map_with_padding(
