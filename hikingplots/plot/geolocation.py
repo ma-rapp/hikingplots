@@ -1,7 +1,7 @@
-import re
+import time
 
 import diskcache
-import overpy
+import overpass
 from geopy.geocoders import Nominatim
 
 from hikingplots.plot.map import MapSection
@@ -12,7 +12,7 @@ class GeoLocator(object):
 
     @staticmethod
     @_cache.memoize()
-    def lookup(latitude, longitude):
+    def lookup(latitude: float, longitude: float):
         user_agent = "hikingplots.geolocator"
         geolocator = Nominatim(user_agent=user_agent)
         return geolocator.reverse(
@@ -20,74 +20,45 @@ class GeoLocator(object):
         )
 
     @staticmethod
-    def get_named_mountain_peaks(map_section):
+    def get_points_of_interest(map_section: MapSection) -> list[dict]:
+        hut_regex = r"(hütte)|(alpe)|(rifugio)|(haus)|(alm([^a-z]|$))"
+        water_body_exclude = (
+            '["amenity"!="kneipp_water_cure"]'
+            '["construction:waterway"!="weir"]'
+            '["location"!="underground"]'
+            '["man_made"!="pipeline"]'
+            '["substance"!="sewer"]'
+            '["tunnel"!="culvert"]'
+            '["water"!="wastewater"]'
+            '["waterway"!="weir"]'
+        )
         return GeoLocator.get_named_elements(
-            map_section, type_="node", attribute="natural=peak"
-        )
-
-    @staticmethod
-    def get_named_mountain_saddles(map_section):
-        return GeoLocator.get_named_elements(
-            map_section, type_="node", attribute="natural=saddle"
-        )
-
-    @staticmethod
-    def get_alpine_huts(map_section):
-        alpine_huts = GeoLocator.get_named_elements(
-            map_section, type_="way", attribute="tourism=alpine_hut"
-        ) + GeoLocator.get_named_elements(
-            map_section, type_="node", attribute="tourism=alpine_hut"
-        )
-        restaurants = GeoLocator.get_named_elements(
-            map_section, type_="way", attribute="amenity=restaurant"
-        )
-        alpine_restaurants = [
-            r
-            for r in restaurants
-            if re.search(
-                r"(hütte)|(alpe)|(rifugio)|(alm([^a-z]|$))",
-                r["tags"].get("name", ""),
-                re.IGNORECASE,
-            )
-        ]
-        return alpine_huts + alpine_restaurants
-
-    @staticmethod
-    def get_named_water_bodies(map_section):
-        water_bodies = (
-            GeoLocator.get_named_elements(
-                map_section, type_="relation", attribute="type=waterway"
-            )
-            + GeoLocator.get_named_elements(
-                map_section, type_="relation", attribute="natural=water"
-            )
-            + GeoLocator.get_named_elements(
-                map_section, type_="way", attribute="natural=water"
-            )
-            + GeoLocator.get_named_elements(
-                map_section, type_="node", attribute="natural=cape"
-            )
-        )
-        return [
-            water_body
-            for water_body in water_bodies
-            if "zoo" not in water_body["tags"]
-            and water_body["tags"].get("amenity") != "kneipp_water_cure"
-            and water_body["tags"].get("construction:waterway") != "weir"
-            and water_body["tags"].get("location") != "underground"
-            and water_body["tags"].get("man_made") != "pipeline"
-            and water_body["tags"].get("substance") != "sewer"
-            and water_body["tags"].get("tunnel") != "culvert"
-            and water_body["tags"].get("water") != "wastewater"
-            and water_body["tags"].get("waterway") != "weir"
-        ]
-
-    @staticmethod
-    def get_named_cave_entrances(map_section):
-        return GeoLocator.get_named_elements(
-            map_section, type_="node", attribute="natural=cave_entrance"
-        ) + GeoLocator.get_named_elements(
-            map_section, type_="way", attribute="natural=cave_entrance"
+            map_section,
+            filters=[
+                # mountain peaks and saddles
+                {"type": "node", "filter": "[natural=peak]"},
+                {"type": "node", "filter": "[natural=saddle]"},
+                # alpine huts and alpine restaurants
+                {
+                    "type": "node",
+                    "filter": f"[tourism=alpine_hut][name~'{hut_regex}',i]",
+                },
+                {
+                    "type": "way",
+                    "filter": f"[tourism=alpine_hut][name~'{hut_regex}',i]",
+                },
+                {
+                    "type": "way",
+                    "filter": f"[amenity=restaurant][name~'{hut_regex}',i]",
+                },
+                # water bodies
+                {"type": "node", "filter": f"[natural=cape]{water_body_exclude}"},
+                {"type": "way", "filter": f"[natural=water]{water_body_exclude}"},
+                {"type": "relation", "filter": f"[type=waterway]{water_body_exclude}"},
+                {"type": "relation", "filter": f"[natural=water]{water_body_exclude}"},
+                # cave entrances
+                {"type": "node", "filter": "[natural=cave_entrance]"},
+            ],
         )
 
     @staticmethod
@@ -101,66 +72,129 @@ class GeoLocator(object):
 
     @staticmethod
     @_cache.memoize()
-    def get_named_elements(map_section: MapSection, type_, attribute):
+    def get_named_elements(
+        map_section: MapSection, filters: list[dict[str, str]]
+    ) -> list[dict]:
+        """
+        filters is a list of dicts with keys "type" (node, way, relation) and "filter" (e.g. "[natural=peak]")
+        """
         extended_map_section = map_section.enlarge_absolute(
             latitude=0.001,  # around 100 meters
             longitude=0.001,  # around 100 meters at the equator
         )  # to capture points on the boundary
+
+        overpass_statements = [
+            f"{filter_['type']}{filter_['filter']}[name];" for filter_ in filters
+        ]
+
         query = f"""\
-[out:json][timeout:25][maxsize:100000000];
-{type_}
-  [{attribute}]({extended_map_section.south_latitude},{extended_map_section.west_longitude},{extended_map_section.north_latitude},{extended_map_section.east_longitude});
-  (._;>;);
+[out:json][timeout:25][maxsize:100000000][bbox:{extended_map_section.south_latitude:.6f},{extended_map_section.west_longitude:.6f},{extended_map_section.north_latitude:.6f},{extended_map_section.east_longitude:.6f}];
+(
+{"\n".join(overpass_statements)}
+);
+(._;>;);
 out;
 """
-        api = overpy.Overpass()
-        result = api.query(query)
+        api = overpass.API()
+        max_retries = 5
+        for retry in range(max_retries):
+            try:
+                response = api.get(query, build=False)
+                break
+            except overpass.errors.MultipleRequestsError:
+                if retry == max_retries - 1:
+                    raise
+                else:
+                    time.sleep(2 * 2**retry)  # exponential backoff
+        else:
+            assert False, "should never reach this point, but here we are..."
+
         elements = []
-        for node in result.nodes:
-            if "name" in node.tags:
+        nodes_by_id = {
+            element["id"]: element
+            for element in response["elements"]
+            if element["type"] == "node"
+        }
+        ways_by_id = {
+            element["id"]: element
+            for element in response["elements"]
+            if element["type"] == "way"
+        }
+        for element in response["elements"]:
+            if "name" not in element.get("tags", {}):
+                continue
+            if element["type"] == "node":
                 elements.append(
                     {
-                        "name": GeoLocator.get_name(node.tags),
-                        "nodes": [{"latitude": node.lat, "longitude": node.lon}],
-                        "tags": node.tags,
+                        "name": GeoLocator.get_name(element["tags"]),
+                        "nodes": [
+                            {"latitude": element["lat"], "longitude": element["lon"]}
+                        ],
+                        "tags": element["tags"],
                     }
                 )
-        nodes_by_id = {node.id: node for node in result.nodes}
-        for way in result.ways:
-            if "name" in way.tags:
+            elif element["type"] == "way":
                 elements.append(
                     {
-                        "name": GeoLocator.get_name(way.tags),
+                        "name": GeoLocator.get_name(element["tags"]),
                         "nodes": [
                             {
-                                "latitude": nodes_by_id[node.id].lat,
-                                "longitude": nodes_by_id[node.id].lon,
+                                "latitude": nodes_by_id[node_id]["lat"],
+                                "longitude": nodes_by_id[node_id]["lon"],
                             }
-                            for node in way.nodes
-                            if extended_map_section.contains_point(
-                                nodes_by_id[node.id].lat, nodes_by_id[node.id].lon
-                            )
+                            for node_id in element["nodes"]
                         ],
-                        "tags": way.tags,
+                        "tags": element["tags"],
                     }
                 )
-        for relation in result.relations:
-            if "name" in relation.tags:
+            elif element["type"] == "relation":
+                nodes = []
+                for member in element["members"]:
+                    if member["type"] == "node":
+                        nodes.append(
+                            {
+                                "latitude": nodes_by_id[member["ref"]]["lat"],
+                                "longitude": nodes_by_id[member["ref"]]["lon"],
+                            }
+                        )
+                    elif member["type"] == "way":
+                        way = ways_by_id[member["ref"]]
+                        nodes.extend(
+                            [
+                                {
+                                    "latitude": nodes_by_id[node_id]["lat"],
+                                    "longitude": nodes_by_id[node_id]["lon"],
+                                }
+                                for node_id in way["nodes"]
+                            ]
+                        )
+                    else:
+                        raise NotImplementedError(
+                            f"Member type {member['type']} of relation not supported yet"
+                        )
                 elements.append(
                     {
-                        "name": GeoLocator.get_name(relation.tags),
-                        "nodes": [
-                            {
-                                "latitude": nodes_by_id[node.id].lat,
-                                "longitude": nodes_by_id[node.id].lon,
-                            }
-                            for member in relation.members
-                            for node in member._result.nodes
-                            if extended_map_section.contains_point(
-                                nodes_by_id[node.id].lat, nodes_by_id[node.id].lon
-                            )
-                        ],
-                        "tags": relation.tags,
+                        "name": GeoLocator.get_name(element["tags"]),
+                        "nodes": nodes,
+                        "tags": element["tags"],
                     }
                 )
+            else:
+                raise NotImplementedError(
+                    f"Element type {element['type']} not supported yet"
+                )
+
+        # filter nodes that are outside the map section
+        for element in elements:
+            element["nodes"] = [
+                node
+                for node in element["nodes"]
+                if extended_map_section.contains_point(
+                    node["latitude"], node["longitude"]
+                )
+            ]
+
+        # filter elements that have no nodes in the map section
+        elements = [element for element in elements if len(element["nodes"]) > 0]
+
         return elements
