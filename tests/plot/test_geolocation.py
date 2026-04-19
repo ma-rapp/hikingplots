@@ -5,6 +5,7 @@ SULZFLUH = (47.0126709, 9.8396931)
 LUENERKRINNE = (47.0573517, 9.7688625)
 GEPATSCH_ALM = (46.8962833, 10.7350495)
 LINDAUER_HUETTE = (47.034420, 9.835660)
+LUENERSEE_ALPE = (47.046457, 9.753194)
 LANDS_END = (50.0662633, -5.7148222)
 TILISUNASEE = (47.026615, 9.879949)
 ILL = (47.067218, 9.926235)
@@ -63,6 +64,16 @@ def test_get_way_hut():
     )
     assert any(
         point["name"] == "Lindauer Hütte" for point in points_of_interest
+    ), points_of_interest
+
+
+def test_get_way_restaurant():
+    GeoLocator._cache.clear()
+    points_of_interest = GeoLocator.get_points_of_interest(
+        _get_map_section(LUENERSEE_ALPE)
+    )
+    assert any(
+        point["name"] == "Lünersee Alpe" for point in points_of_interest
     ), points_of_interest
 
 

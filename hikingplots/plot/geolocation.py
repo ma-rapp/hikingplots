@@ -37,6 +37,10 @@ class GeoLocator(object):
                     "type": "way",
                     "filter": f"[tourism=alpine_hut][name~'{hut_regex}',i]",
                 },
+                {
+                    "type": "way",
+                    "filter": f"[amenity=restaurant][name~'{hut_regex}',i]",
+                },
                 # water bodies
                 {"type": "node", "filter": "[natural=cape]"},
                 {"type": "way", "filter": "[natural=water]"},
