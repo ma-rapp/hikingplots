@@ -110,19 +110,7 @@ class Track(MapPlottableUsingMatplotlib):
 
     @property
     def landmarks(self):
-        peaks_in_area = GeoLocator.get_named_mountain_peaks(self.bounding_box)
-        saddles_in_area = GeoLocator.get_named_mountain_saddles(self.bounding_box)
-        alpine_huts_in_area = GeoLocator.get_alpine_huts(self.bounding_box)
-        water_bodies_in_area = GeoLocator.get_named_water_bodies(self.bounding_box)
-        cave_entrances_in_area = GeoLocator.get_named_cave_entrances(self.bounding_box)
-
-        landmarks = (
-            peaks_in_area
-            + saddles_in_area
-            + alpine_huts_in_area
-            + water_bodies_in_area
-            + cave_entrances_in_area
-        )
+        landmarks = GeoLocator.get_points_of_interest(self.bounding_box)
 
         min_distance = 40 / 40_000_000 * 360  # roughly 40 meters to degrees
 

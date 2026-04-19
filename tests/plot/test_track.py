@@ -91,3 +91,6 @@ def test_track_properties():
     assert track.year == 2025
     assert track.month == 1
     assert track.day == 2
+    assert track.country == "Österreich"
+    assert track.state == "Tirol"
+    assert track.city == "Tannheim"
