@@ -22,6 +22,16 @@ class GeoLocator(object):
     @staticmethod
     def get_points_of_interest(map_section: MapSection) -> list[dict]:
         hut_regex = r"(hütte)|(alpe)|(rifugio)|(haus)|(alm([^a-z]|$))"
+        water_body_exclude = (
+            '["amenity"!="kneipp_water_cure"]'
+            '["construction:waterway"!="weir"]'
+            '["location"!="underground"]'
+            '["man_made"!="pipeline"]'
+            '["substance"!="sewer"]'
+            '["tunnel"!="culvert"]'
+            '["water"!="wastewater"]'
+            '["waterway"!="weir"]'
+        )
         return GeoLocator.get_named_elements(
             map_section,
             filters=[
@@ -42,10 +52,10 @@ class GeoLocator(object):
                     "filter": f"[amenity=restaurant][name~'{hut_regex}',i]",
                 },
                 # water bodies
-                {"type": "node", "filter": "[natural=cape]"},
-                {"type": "way", "filter": "[natural=water]"},
-                {"type": "relation", "filter": "[type=waterway]"},
-                {"type": "relation", "filter": "[natural=water]"},
+                {"type": "node", "filter": f"[natural=cape]{water_body_exclude}"},
+                {"type": "way", "filter": f"[natural=water]{water_body_exclude}"},
+                {"type": "relation", "filter": f"[type=waterway]{water_body_exclude}"},
+                {"type": "relation", "filter": f"[natural=water]{water_body_exclude}"},
                 # cave entrances
                 {"type": "node", "filter": "[natural=cave_entrance]"},
             ],
@@ -95,7 +105,7 @@ out;
                 if retry == max_retries - 1:
                     raise
                 else:
-                    time.sleep(2**retry)  # exponential backoff
+                    time.sleep(2 * 2**retry)  # exponential backoff
         else:
             assert False, "should never reach this point, but here we are..."
 
