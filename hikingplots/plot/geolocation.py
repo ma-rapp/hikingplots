@@ -95,7 +95,7 @@ class GeoLocator(object):
 (._;>;);
 out;
 """
-        api = overpass.API()
+        api = overpass.API(headers={"User-Agent": "ma-rapp.hikingplots.geolocator"})
         max_retries = 5
         for retry in range(max_retries):
             try:
