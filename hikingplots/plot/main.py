@@ -69,7 +69,7 @@ def plot_area(*args, output_path, **kwargs):
     type=click.Path(exists=True),
 )
 @click.option("--draw-partial-track", type=float, default=1.0)
-@click.option("--track-halign", type=str, default="center")
+@click.option("--halign-ideal-centerline", type=float, default=0.5)
 @click.option("--draw-topo/--no-draw-topo", is_flag=True, default=True)
 @click.option(
     "--draw-major-level-labels/--no-draw-major-level-labels", is_flag=True, default=True

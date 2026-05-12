@@ -81,7 +81,7 @@ def plot_track_duotone(
     topo_land_path: pathlib.Path | str,
     topo_water_path: pathlib.Path | str,
     draw_partial_track: float = 1.0,
-    track_halign: str = "center",
+    halign_ideal_centerline: float = 0.5,
     draw_topo: bool = True,
     draw_major_level_labels: bool = True,
     add_scale: bool = False,
@@ -94,7 +94,7 @@ def plot_track_duotone(
         topo_land_path: Path to the land topography data (see `topo-land` in README.md).
         topo_water_path: Path to the water topography data (see `topo-water` in README.md).
         draw_partial_track: Fraction of the track to draw (if 0 <= `draw_partial_track` < 1). Draw full track if `draw_partial_track` >= 1.
-        track_halign: Horizontal alignment of the track. One of "left", "center", "right".
+        halign_ideal_centerline: The target centerline of the track in the plot, as a fraction of the plot width (0 = left edge, 0.5 = center, 1 = right edge). The actual centerline will be adjusted to fit the track and the area of interest.
         draw_topo: Whether to draw the topography.
         draw_major_level_labels: Whether to draw the major level labels.
         show_steps: Whether to log the steps on the console.
@@ -135,6 +135,7 @@ def plot_track_duotone(
 
         if actual_aspect > target_aspect:
             # too wide -> make higher
+            # centerline is forced at 0.5, nothing to do
             area_of_interest.south_latitude = (
                 area_of_interest.north_latitude
                 - area_of_interest.width * longitude_scale / target_aspect
@@ -144,24 +145,34 @@ def plot_track_duotone(
             target_width_longitude = (
                 area_of_interest.height / longitude_scale * target_aspect
             )
-            if track_halign == "center":
-                current_center = area_of_interest.center_longitude
-                area_of_interest.east_longitude = (
-                    current_center + 0.5 * target_width_longitude
-                )
-                area_of_interest.west_longitude = (
-                    current_center - 0.5 * target_width_longitude
-                )
-            elif track_halign == "left":
+
+            if (
+                halign_ideal_centerline
+                < area_of_interest.width / target_width_longitude / 2
+            ):
+                # track is already more left than the ideal centerline, so we align the left edge of the area of interest with the left edge of the track
                 area_of_interest.east_longitude = (
                     area_of_interest.west_longitude + target_width_longitude
                 )
-            elif track_halign == "right":
+            elif (
+                halign_ideal_centerline
+                > 1 - area_of_interest.width / target_width_longitude / 2
+            ):
+                # track is already more right than the ideal centerline, so we align the right edge of the area of interest with the right edge of the track
                 area_of_interest.west_longitude = (
                     area_of_interest.east_longitude - target_width_longitude
                 )
             else:
-                raise ValueError(f"Invalid track_halign: {track_halign}")
+                # track can be centered at the ideal centerline, so we center it there
+                current_center = area_of_interest.center_longitude
+                area_of_interest.east_longitude = (
+                    current_center
+                    + (1 - halign_ideal_centerline) * target_width_longitude
+                )
+                area_of_interest.west_longitude = (
+                    current_center - halign_ideal_centerline * target_width_longitude
+                )
+
         assert area_of_interest.contains(track.bounding_box)
 
     if draw_topo:

@@ -88,7 +88,6 @@ python -m hikingplots.plot.main plot-track-duotone \
     example-tracks/widderstein \
     --draw-topo \
     --draw-major-level-labels \
-    --track-halign center \
     --output-path example-plots/widderstein-duotone.png
 ```
 
